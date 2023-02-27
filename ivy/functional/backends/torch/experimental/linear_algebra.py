@@ -152,3 +152,66 @@ def adjoint(
 ) -> torch.Tensor:
     _check_valid_dimension_size(x)
     return torch.adjoint(x).resolve_conj()
+
+
+# torch.linalg.lu(A, *, pivot=True, out=None)
+# n = x.shape[0]
+# L = np.eye(n)
+# U = x.copy()
+# if pivot:
+#     P = np.eye(n)
+
+# for k in range(n-1):
+#     if pivot:
+#         # partial pivoting
+#         max_idx = np.abs(U[k:, k]).argmax() + k
+#         U[[k, max_idx]] = U[[max_idx, k]]
+#         if k > 0:
+#             L[[k, max_idx], :k] = L[[max_idx, k], :k]
+#         if max_idx != k:
+#             P[[k, max_idx]] = P[[max_idx, k]]
+#     # elimination
+#     div = U[k, k]
+#     L[k+1:, k] = U[k+1:, k] / div
+#     U[k+1:, k:] -= L[k+1:, k, None] * U[k, k:]
+#     U[k+1:, k] = 0.
+# P = np.round(P,4)
+# L = np.round(L,4)
+# U = np.round(U,4)
+# # ROUND P,L,U to 4 dp if more else fine
+# if pivot:
+#     return P, L, U
+# else:
+#     return None, L, U
+
+
+def lu(
+    x: torch.Tensor,
+    /,
+    *,
+    pivot: bool = True,
+    out: Optional[torch.Tensor] = None,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    n = x.shape[0]
+    L = torch.eye(n)
+    U = x.clone()
+    if pivot:
+        P = torch.eye(n)
+    for k in range(n - 1):
+        if pivot:
+            max_idx = torch.abs(U[k:, k]).argmax() + k
+            U[[k, max_idx]] = U[[max_idx, k]]
+            if k > 0:
+                L[[k, max_idx], :k] = L[[max_idx, k], :k]
+            if max_idx != k:
+                P[[k, max_idx]] = P[[max_idx, k]]
+
+        # elimination
+        div = U[k, k]
+        L[k + 1 :, k] = U[k + 1 :, k] / div
+        U[k + 1 :, k:] -= L[k + 1 :, k, None] * U[k, k:]
+        U[k + 1 :, k] = 0.0
+    P = torch.round(P, 4)
+    L = torch.round(L, 4)
+    U = torch.round(U, 4)
+    return P, L, U
