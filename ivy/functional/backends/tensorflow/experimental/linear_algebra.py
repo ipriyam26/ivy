@@ -120,3 +120,21 @@ def adjoint(
 ) -> Union[tf.Tensor, tf.Variable]:
     _check_valid_dimension_size(x)
     return tf.linalg.adjoint(x)
+
+
+def lu(
+    input: Union[tf.Tensor, tf.Variable],
+    /,
+    *,
+    output_idx_type: tf.dtypes.int32,
+    name: Optional[str] = None,
+) -> Tuple[
+    Union[tf.Tensor, tf.Variable],
+    Union[tf.Tensor, tf.Variable],
+    Union[tf.Tensor, tf.Variable],
+]:
+    return tf.linalg.lu(
+        input,
+        output_idx_type=output_idx_type,
+        name=name,
+    )

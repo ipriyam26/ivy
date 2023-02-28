@@ -190,7 +190,7 @@ def lu(
     /,
     *,
     pivot: bool = True,
-    out: Optional[torch.Tensor] = None,
+    out: Optional[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     n = x.shape[0]
     L = torch.eye(n)
@@ -214,4 +214,14 @@ def lu(
     P = torch.round(P, 4)
     L = torch.round(L, 4)
     U = torch.round(U, 4)
+    if ivy.exists(out):
+        if len(out) != 3:
+            raise ValueError("out must be a tuple of length 3")
+        ivy.inplace_update(out[0], P)
+        ivy.inplace_update(out[1], L)
+        ivy.inplace_update(out[2], U)
+
     return P, L, U
+
+
+lu.support_native_out = False
