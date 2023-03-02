@@ -137,3 +137,38 @@ def adjoint(
     axes = list(range(len(x.shape)))
     axes[-1], axes[-2] = axes[-2], axes[-1]
     return np.conjugate(np.transpose(x, axes=axes))
+
+
+def lu(
+    x: np.ndarray,
+    /,
+    *,
+    pivot: Optional[bool] = True,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    n = x.shape[0]
+    L = np.eye(n)
+    U = x.copy()
+    P = np.eye(n)
+
+    for k in range(n - 1):
+        if pivot:
+            # partial pivoting
+            max_idx = np.abs(U[k:, k]).argmax() + k
+            U[[k, max_idx]] = U[[max_idx, k]]
+            if k > 0:
+                L[[k, max_idx], :k] = L[[max_idx, k], :k]
+            if max_idx != k:
+                P[[k, max_idx]] = P[[max_idx, k]]
+        # elimination
+        div = U[k, k]
+        L[k + 1 :, k] = U[k + 1 :, k] / div
+        U[k + 1 :, k:] -= L[k + 1 :, k, None] * U[k, k:]
+        U[k + 1 :, k] = 0.0
+    P = np.round(P, 4)
+    L = np.round(L, 4)
+    U = np.round(U, 4)
+    # ROUND P,L,U to 4 dp if more else fine
+    return P, L, U
+
+
+lu.support_native_out = False

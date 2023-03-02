@@ -128,3 +128,35 @@ def adjoint(
     axes = list(range(len(x.shape)))
     axes[-1], axes[-2] = axes[-2], axes[-1]
     return jnp.conjugate(jnp.transpose(x, axes=axes))
+
+
+def lu(
+    x: JaxArray,
+    /,
+    *,
+    pivot: Optional[bool] = True,
+) -> Tuple[JaxArray, JaxArray, JaxArray]:
+    n = x.shape[0]
+    L = jnp.eye(n)
+    U = x.copy()
+    P = jnp.eye(n)
+
+    for k in range(n - 1):
+        if pivot:
+            # partial pivoting
+            max_idx = jnp.abs(U[k:, k]).argmax() + k
+            U[[k, max_idx]] = U[[max_idx, k]]
+            if k > 0:
+                L[[k, max_idx], :k] = L[[max_idx, k], :k]
+            if max_idx != k:
+                P[[k, max_idx]] = P[[max_idx, k]]
+        # elimination
+        div = U[k, k]
+        L[k + 1 :, k] = U[k + 1 :, k] / div
+        U[k + 1 :, k:] -= L[k + 1 :, k, None] * U[k, k:]
+        U[k + 1 :, k] = 0.0
+    P = jnp.round(P, 4)
+    L = jnp.round(L, 4)
+    U = jnp.round(U, 4)
+    # ROUND P,L,U to 4 dp if more else fine
+    return P, L, U
