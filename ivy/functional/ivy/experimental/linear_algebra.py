@@ -457,3 +457,43 @@ def adjoint(
                    [2.-2.j, 4.+4.j]])
     """
     return current_backend(x).adjoint(x, out=out)
+
+
+@to_native_arrays_and_back
+@handle_exceptions
+@handle_nestable
+def lu(
+    x: Union[ivy.Array, ivy.NativeArray],
+    /,
+    *,
+    pivot: Optional[bool] = True,
+) -> Tuple[ivy.Array, ivy.Array, ivy.Array]:
+    """Computes the LU decomposition of a matrix.
+
+    Parameters
+    ----------
+    x
+        An array with more than one dimension.
+
+    Returns
+    -------
+    p
+        The permutation matrix.
+    l
+        The lower triangular matrix.
+    u
+        The upper triangular matrix.
+
+    Examples
+    --------
+        >>> x = ivy.array([[1., 2.], [3., 4.]])
+        >>> p, l, u = ivy.lu(x)
+        >>> p; l; u
+        ivy.array([[0., 1.],
+                   [1., 0.]])
+        ivy.array([[1., 0.],
+                   [0., 1.]])
+        ivy.array([[3., 4.],
+                   [0., 0.]])
+    """
+    return current_backend(x).lu(x, pivot=pivot)

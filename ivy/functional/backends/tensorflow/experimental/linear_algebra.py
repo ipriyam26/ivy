@@ -126,7 +126,7 @@ def lu(
     input: Union[tf.Tensor, tf.Variable],
     /,
     *,
-    output_idx_type: tf.dtypes.int32,
+    output_idx_type: tf.dtypes.int32 = tf.dtypes.int32,
     name: Optional[str] = None,
 ) -> Tuple[
     Union[tf.Tensor, tf.Variable],

@@ -200,20 +200,20 @@ def lu(
     for k in range(n - 1):
         if pivot:
             max_idx = torch.abs(U[k:, k]).argmax() + k
-            U[[k, max_idx]] = U[[max_idx, k]]
+            U[[k, max_idx], k:] = U[[max_idx, k], k:]
             if k > 0:
                 L[[k, max_idx], :k] = L[[max_idx, k], :k]
             if max_idx != k:
-                P[[k, max_idx]] = P[[max_idx, k]]
+                P[[k, max_idx], :k] = P[[max_idx, k], :k]
 
         # elimination
         div = U[k, k]
         L[k + 1 :, k] = U[k + 1 :, k] / div
         U[k + 1 :, k:] -= L[k + 1 :, k, None] * U[k, k:]
         U[k + 1 :, k] = 0.0
-    P = torch.round(P, 4)
-    L = torch.round(L, 4)
-    U = torch.round(U, 4)
+    P = torch.round(P, decimals=4)
+    L = torch.round(L, decimals=4)
+    U = torch.round(U, decimals=4)
     if ivy.exists(out):
         if len(out) != 3:
             raise ValueError("out must be a tuple of length 3")
