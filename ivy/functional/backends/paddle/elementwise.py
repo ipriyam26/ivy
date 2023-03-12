@@ -2,11 +2,11 @@
 from typing import Union, Optional
 
 import paddle
-
 # local
 import ivy
 from . import backend_version
 from ivy.utils.exceptions import IvyNotImplementedException
+from ivy.func_wrapper import with_unsupported_dtypes, with_unsupported_device_and_dtypes
 
 
 def add(
@@ -18,6 +18,8 @@ def add(
     out: Optional[paddle.Tensor] = None,
 ) -> paddle.Tensor:
     x1, x2 = ivy.promote_types_of_inputs(x1, x2)
+    x1, x2 = ivy.broadcast_arrays(x1, x2)
+    x1, x2 = x1.data, x2.data
     if alpha not in (1, None):
         x2 = multiply(x2, alpha)
     return paddle.add(x1, x2)
@@ -30,6 +32,7 @@ def bitwise_xor(
     *,
     out: Optional[paddle.Tensor] = None,
 ) -> paddle.Tensor:
+    x1, x2 = ivy.promote_types_of_inputs(x1, x2)
     return paddle.bitwise_xor(x1, x2)
 
 
@@ -43,6 +46,21 @@ def bitwise_invert(
     return paddle.bitwise_not(x)
 
 
+@with_unsupported_dtypes(
+    {
+        "2.4.2 and below": (
+            "int8",
+            "int16",
+            "uint8",
+            "uint16",
+            "bfloat16",
+            "complex64",
+            "complex128",
+            "bool",
+        )
+    },
+    backend_version,
+)
 def isfinite(
         x: paddle.Tensor, /, *, out: Optional[paddle.Tensor] = None
 ) -> paddle.Tensor:
@@ -97,6 +115,7 @@ def bitwise_and(
     *,
     out: Optional[paddle.Tensor] = None,
 ) -> paddle.Tensor:
+    x1, x2 = ivy.promote_types_of_inputs(x1, x2)
     return paddle.bitwise_and(x1, x2)
 
 
@@ -161,6 +180,10 @@ def multiply(
     *,
     out: Optional[paddle.Tensor] = None,
 ) -> paddle.Tensor:
+    x1, x2 = ivy.promote_types_of_inputs(x1, x2)
+    x1, x2 = ivy.broadcast_arrays(x1, x2)
+    x1, x2 = x1.data, x2.data
+
     return paddle.multiply(x1, x2)
 
 
@@ -181,6 +204,10 @@ def divide(
     *,
     out: Optional[paddle.Tensor] = None,
 ) -> paddle.Tensor:
+    x1, x2 = ivy.promote_types_of_inputs(x1, x2)
+    x1, x2 = ivy.broadcast_arrays(x1, x2)
+    x1, x2 = x1.data, x2.data
+
     return paddle.divide(x1, x2)
 
 
@@ -223,6 +250,7 @@ def logical_and(
 def logical_or(
     x1: paddle.Tensor, x2: paddle.Tensor, /, *, out: Optional[paddle.Tensor] = None
 ) -> paddle.Tensor:
+    x1, x2 = ivy.promote_types_of_inputs(x1, x2)
     return logical_or(x1, x2)
 
 
@@ -254,6 +282,9 @@ def tanh(x: paddle.Tensor, /, *, out: Optional[paddle.Tensor] = None) -> paddle.
     return paddle.tanh(x)
 
 
+@with_unsupported_device_and_dtypes(
+    {"2.4.2 and below": {"cpu": ("uint16", "bfloat16", "float16", "complex64", "complex128")}}, backend_version
+)
 def floor_divide(
     x1: Union[float, paddle.Tensor],
     x2: Union[float, paddle.Tensor],
@@ -261,7 +292,7 @@ def floor_divide(
     *,
     out: Optional[paddle.Tensor] = None,
 ) -> paddle.Tensor:
-    return paddle.floor_divide(x1, x2)
+    return paddle.floor(x1 / x2)
 
 
 def bitwise_or(
@@ -271,6 +302,7 @@ def bitwise_or(
     *,
     out: Optional[paddle.Tensor] = None,
 ) -> paddle.Tensor:
+    x1, x2 = ivy.promote_types_of_inputs(x1, x2)
     return paddle.bitwise_or(x1, x2)
 
 
@@ -290,6 +322,10 @@ def square(
     return paddle.square(x)
 
 
+@with_unsupported_device_and_dtypes(
+    {"2.4.2 and below": {"cpu": ("int8", "int16", "int32", "int64", "uint8", "uint16",
+                                 "bfloat16", "float16", "complex64", "complex128", "bool")}}, backend_version
+)
 def pow(
     x1: Union[float, paddle.Tensor],
     x2: Union[float, paddle.Tensor],
@@ -297,8 +333,9 @@ def pow(
     *,
     out: Optional[paddle.Tensor] = None,
 ) -> paddle.Tensor:
-    x1, x2 = ivy.promote_types_of_inputs(x1,x2)
-    return paddle.pow(x1, x2)
+    x1, x2 = ivy.promote_types_of_inputs(x1, x2)
+    x1, x2 = ivy.broadcast_arrays(x1, x2)
+    return paddle.pow(x1.data, x2.data)
 
 
 def round(x: paddle.Tensor, /, *, out: Optional[paddle.Tensor] = None) -> paddle.Tensor:
@@ -353,6 +390,9 @@ def subtract(
     out: Optional[paddle.Tensor] = None,
 ) -> paddle.Tensor:
     x1, x2 = ivy.promote_types_of_inputs(x1, x2)
+    x1, x2 = ivy.broadcast_arrays(x1, x2)
+    x1, x2 = x1.data, x2.data
+    
     if alpha not in (1, None):
         x2 = multiply(x2, alpha)
     return paddle.subtract(x1, x2)
@@ -387,17 +427,11 @@ def bitwise_right_shift(
     *,
     out: Optional[paddle.Tensor] = None,
 ) -> paddle.Tensor:
-    x1 = paddle.to_tensor(x1) if not isinstance(x1, paddle.Tensor) else x1
-    x2 = paddle.to_tensor(x2) if not isinstance(x2, paddle.Tensor) else x2
 
-    data_type = x1.numpy().dtype
-    num_bytes = data_type.itemsize
-    mask = paddle.bitwise_not(paddle.bitwise_and(
-        x1, paddle.to_tensor(-1 << num_bytes, dtype=x1.dtype)))
-    c = [int(a) >> int(b) for a, b in zip(x1, x2)]
-    result = paddle.bitwise_and(paddle.to_tensor(c, dtype=mask.dtype), mask)
-    return result
+    ret_dtype = ivy.promote_types(x1.dtype, x2.dtype)
+    x1, x2 = ivy.broadcast_arrays(x1.cast('float64'), x2.cast('float64'))
 
+    return paddle.floor(x1.data / 2**x2.data).astype(ret_dtype) 
 
 def bitwise_left_shift(
     x1: Union[int, bool, paddle.Tensor],
@@ -406,16 +440,10 @@ def bitwise_left_shift(
     *,
     out: Optional[paddle.Tensor] = None,
 ) -> paddle.Tensor:
-    x1 = paddle.to_tensor(x1) if not isinstance(x1, paddle.Tensor) else x1
-    x2 = paddle.to_tensor(x2) if not isinstance(x2, paddle.Tensor) else x2
+    ret_dtype = ivy.promote_types(x1.dtype, x2.dtype)
+    x1, x2 = ivy.broadcast_arrays(x1.cast('float64'), x2.cast('float64'))
 
-    data_type = x1.numpy().dtype
-    num_bytes = data_type.itemsize
-    mask = paddle.bitwise_not(paddle.bitwise_and(
-        x1, paddle.to_tensor(-1 << num_bytes, dtype=x1.dtype)))
-    c = [int(a) << int(b) for a, b in zip(x1, x2)]
-    result = paddle.bitwise_and(paddle.to_tensor(c, dtype=mask.dtype), mask)
-    return result
+    return paddle.floor(x1.data * 2**x2.data).astype(ret_dtype) 
 
 
 # Extra #
